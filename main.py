@@ -1,38 +1,69 @@
-available = [3,3,2]
-_max =[[7,5,3],[3,2,2],[9,0,2],[2,2,2],[4,3,3]]
-allocation = [[0,1,0],[2,0,0],[3,0,0],[2,1,1],[0,0,2]]
-need = []
-
-def banker():
-    for i in range(len(_max)):
-        for j in range(len(_max[i])):
-            need.append(_max[i][j]-allocation[i][j])
+class Banker:
+    def __init__(self, _max, allocation, available):
+        self._max = _max
+        self.allocation = allocation
+        self.available = available
+        self.need = []
+        self.num_resources = len(_max[0])
+        self.calculate_need()
     
-    return [need[i:i+3] for i in range(0, len(need), 3)]
+    def calculate_need(self):
+        for i in range(len(self._max)):
+            for j in range(self.num_resources):
+                self.need.append(self._max[i][j]-self.allocation[i][j])
+        self.need = [self.need[i:i+self.num_resources] for i in range(0, len(self.need), self.num_resources)]
 
-need = banker()
+    def safe_state(self):
+        work = self.available
+        finish = [False for i in range(len(self.need))]
+        sequence = []
+        while False in finish:
+            for i in range(len(self.need)):
+                for j in range(len(self.need[i])):
+                    if self.need[i][j] <= work[j] and finish[i] == False:
+                        work[j] += self.allocation[i][j]
+                        finish[i] = True
+                        sequence.append(f"p{i+1}")
+        return sequence
+    
+    def request_resources(self, process, request):
+        if request[0] > self.need[process][0] or request[1] > self.need[process][1] or request[2] > self.need[process][2]:
+            print("Error: Request exceeds need")
+            return False
+        elif request[0] > self.available[0] or request[1] > self.available[1] or request[2] > self.available[2]:
+            print("Error: Request exceeds available")
+            return False
+        else:
+            for i in range(self.num_resources):
+                self.available[i] -= request[i]
+                self.allocation[process][i] += request[i]
+                self.need[process][i] -= request[i]
+            if self.safe_state() == False:
+                for i in range(self.num_resources):
+                    self.available[i] += request[i]
+                    self.allocation[process][i] -= request[i]
+                    self.need[process][i] += request[i]
+                print("Error: Request results in unsafe state")
+                return False
+            else:
+                print("Request granted")
+                return True
+            
+    def table(self):
+        print("Process\t\tMax\t\tAllocation\tNeed\t\tAvailable")
+        for i in range(len(self._max)):
+            print(f"P{i+1}\t\t{self._max[i]}\t{self.allocation[i]}\t{self.need[i]}\t{self.available}")
 
-#check if system is in safe state
 
-def safe_state():
-    work = available
-    finish = [False,False,False,False,False]
-    sequence = []
-    while False in finish:
-        for i in range(len(need)):
-            # if (need[i][0] <= work[0] and need[i][1] <= work[1] and need[i][2] <= work[2]) and finish[i] == False:
-            #     work[0] += allocation[i][0]
-            #     work[1] += allocation[i][1]
-            #     work[2] += allocation[i][2]
-            #     finish[i] = True
-            #     sequence.append(f"p{i+1}")
-            for j in range(len(need[i])):
-                if need[i][j] <= work[j] and finish[i] == False:
-                    work[j] += allocation[i][j]
-                    finish[i] = True
-                    sequence.append(f"p{i+1}")
-    return sequence
+if __name__ == "__main__":
+    _max = [[7, 5, 3], [3, 2, 2], [9, 0, 2], [2, 2, 2], [4, 3, 3]]
+    allocation = [[0, 1, 0], [2, 0, 0], [3, 0, 2], [2, 1, 1], [0, 0, 2]]
+    available = [3, 3, 2]
+    banker = Banker(_max, allocation, available)
+    banker.table()
 
-print(safe_state())
+    print("Safe sequence: ", banker.safe_state())
 
+    banker.request_resources(0, [0, 1, 0])
+    banker.table()
 
